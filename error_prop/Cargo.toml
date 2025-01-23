@@ -1,0 +1,8 @@
+[package]
+name = "error_prop"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.sdl2]
+features = ["use_mac_framework"]
+version = "*"
