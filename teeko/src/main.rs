@@ -2,6 +2,13 @@ use sdl2::rect::Rect;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 
+mod view;
+use view::board_view;
+
+mod model;
+use model::game::make_blank_board;
+use model::game::GameState;
+
 fn main() -> Result<(), String> {
 
     let screen_width: u32 = 800;
@@ -17,9 +24,16 @@ fn main() -> Result<(), String> {
         .build()
         .unwrap();
 
-    let screen_area = Rect::new(0, 0, screen_width, screen_height);
-    let clear_color = Color::RGB(64, 192, 255);
-    canvas.set_draw_color(clear_color);
+    let board_view: board_view::Renderer = board_view::Renderer { 
+        screen_area: Rect::new(0, 0, screen_width, screen_height), 
+        clear_color: Color::RGB(64, 192, 255), 
+    };
+
+    let mut game_state = GameState { board: make_blank_board() };
+
+    game_state.print_board();
+    game_state.jumble_board();
+    game_state.print_board();
 
     // game loop
 
@@ -32,14 +46,11 @@ fn main() -> Result<(), String> {
                 Event::Quit {..} => {
                     running = false;
                 },
-                Event::MouseMotion { x, y, xrel, yrel, .. } => {
-                    println!("Mouse x: {}, y: {}", x, y);
-                    println!("Relative x: {}, y: {}", xrel, yrel);
-                },
                 _ => {}
             }
         }
-        canvas.fill_rect(screen_area);
+        
+        board_view.render(&mut canvas);
         canvas.present(); // update display
     }
 
