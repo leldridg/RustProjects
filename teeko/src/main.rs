@@ -1,12 +1,9 @@
-use sdl2::rect::Rect;
-use sdl2::pixels::Color;
 use sdl2::event::Event;
 
 mod view;
-use view::board_view;
+use view::board_view::Renderer;
 
 mod model;
-use model::game::make_blank_board;
 use model::game::GameState;
 
 fn main() -> Result<(), String> {
@@ -24,16 +21,9 @@ fn main() -> Result<(), String> {
         .build()
         .unwrap();
 
-    let board_view: board_view::Renderer = board_view::Renderer { 
-        screen_area: Rect::new(0, 0, screen_width, screen_height), 
-        clear_color: Color::RGB(64, 192, 255), 
-    };
+    let board_view: Renderer = Renderer::new(screen_width, screen_height);
 
-    let mut game_state = GameState { board: make_blank_board() };
-
-    game_state.print_board();
-    game_state.jumble_board();
-    game_state.print_board();
+    let mut game_state = GameState::new();
 
     // game loop
 
@@ -46,11 +36,17 @@ fn main() -> Result<(), String> {
                 Event::Quit {..} => {
                     running = false;
                 },
+                Event::MouseButtonDown { x, y, .. } => {
+                    let col: usize =  (x * 5 / board_view.screen_area.w).try_into().unwrap();
+                    let row: usize =  (y * 5 / board_view.screen_area.h).try_into().unwrap();
+
+                    game_state.handle_click(row, col);
+                },
                 _ => {}
             }
         }
         
-        board_view.render(&mut canvas);
+        board_view.render(&mut canvas, &game_state.board);
         canvas.present(); // update display
     }
 
