@@ -1,23 +1,31 @@
+use sdl2::image::LoadTexture;
 use sdl2::rect::Rect;
 use sdl2::rect::Point;
 use sdl2::pixels::Color;
-use sdl2::render::Canvas;
+use sdl2::render::TextureCreator;
+use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
+use sdl2::video::WindowContext;
 
 use crate::model::game::BoardPiece;
 
 
-pub struct Renderer {
+pub struct Renderer<'a> {
     pub screen_area: Rect,
     pub clear_color: Color,
+    pieces: Texture<'a>,
 }
 
-impl Renderer {
+impl<'a> Renderer<'a> {
 
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: u32, height: u32,
+        texture_loader: &'a TextureCreator<WindowContext>) -> Self {
+        
+        let _pieces = texture_loader.load_texture("img/pieces.png");
         Self {
             screen_area: Rect::new(0, 0, width, height), 
-            clear_color: Color::RGB(64, 192, 255), 
+            clear_color: Color::RGB(64, 192, 255),
+            pieces: _pieces.ok().unwrap(), 
         }
         
     }
@@ -79,20 +87,29 @@ impl Renderer {
                     continue;
                 }
 
-                let mut color = Color::RGB(0, 0, 0);
+                let image = &self.pieces;
+                let image_attributes = image.query();
+                // src_rect defines what part of image taking piece from
+                // set to black piece region (lower left quarter) by default
+                let mut src_rect = Rect::new(
+                    0, 
+                    (image_attributes.height / 2).try_into().unwrap(),
+                    image_attributes.width / 2,
+                    image_attributes.height / 2
+                );
                 if board[row][col] == BoardPiece::Red {
-                    color = Color::RGB(255, 0, 0);
+                    src_rect.set_x((image_attributes.width / 2).try_into().unwrap());
+                    src_rect.set_y(0);
                 }
 
-                let rect: Rect = Rect::new(
+                let dst_rect: Rect = Rect::new(
                     width / 4 + width * j,
                     height / 4 + height * i,
                     (width / 2).try_into().unwrap(),
                     (height / 2).try_into().unwrap()
                 );
 
-                canvas.set_draw_color(color);
-                canvas.fill_rect(rect).ok().unwrap_or_default();
+                canvas.copy(image, src_rect, dst_rect).ok().unwrap();
             }
         }
     }
