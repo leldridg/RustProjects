@@ -1,1 +1,2 @@
 cargo:rustc-link-search=framework=/Library/Frameworks
+cargo:rustc-link-arg=-Wl,-rpath,/Library/Frameworks

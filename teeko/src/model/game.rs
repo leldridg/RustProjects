@@ -1,3 +1,5 @@
+use crate::common::common::{Message, System};
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum BoardPiece {
     None,
@@ -15,6 +17,7 @@ pub struct GameState {
     pub pieces_dropped: [i32; 2],
     history: Vec<PieceDropCommand>,
     history_pos: usize, // current position in history
+    pub system: System,
 }
 
 impl GameState {
@@ -25,7 +28,8 @@ impl GameState {
             current_player: BoardPiece::Red,
             pieces_dropped: [0,0],
             history: Vec::new(),
-            history_pos: 0
+            history_pos: 0,
+            system: System::new(),
         }
     }
 
@@ -55,7 +59,23 @@ impl GameState {
         println!();
     }
 
-    pub fn handle_click(&mut self, row: usize, col: usize) {
+    pub fn update(&mut self) {
+        
+        for i in 0..self.system.message_queue.len() {
+            let message = self.system.message_queue[i];
+
+            match message {
+                Message::DropPiece(row, col) => self.handle_click(row, col),
+                Message::DoMove => self.redo_action(),
+                Message::UndoMove => self.undo_action(),
+            }
+        }
+
+
+        self.system.message_queue.clear();
+    }
+
+    fn handle_click(&mut self, row: usize, col: usize) {
         let command = PieceDropCommand {
             row: row,
             col: col,
@@ -76,6 +96,8 @@ impl GameState {
         command.perform(self);
         self.history.push(command);
         self.history_pos = self.history.len() -  1;
+
+        self.system.publish(Message::DoMove);
     }
 
     pub fn redo_action(&mut self) {
@@ -88,6 +110,8 @@ impl GameState {
 
         let command: PieceDropCommand = self.history[self.history_pos].copy();
         command.perform(self);
+
+        self.system.publish(Message::DoMove);
     }
 
     pub fn undo_action(&mut self) {
@@ -104,6 +128,8 @@ impl GameState {
         }
 
         self.history_pos -= 1;
+
+        self.system.publish(Message::UndoMove);
     }
 
     fn next_turn(&mut self) {

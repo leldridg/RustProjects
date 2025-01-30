@@ -1,10 +1,17 @@
 use sdl2::event::Event;
+use sdl2::mixer;
 
 mod view;
 use view::board_view::Renderer;
 
 mod model;
 use model::game::{GameState, PieceDropCommand};
+
+mod common;
+use common::common::{Message, System};
+
+mod audio;
+use audio::audio::AudioSystem;
 
 fn test_task_a() {
 
@@ -68,6 +75,13 @@ fn main() -> Result<(), String> {
     let board_view: Renderer = Renderer::new(screen_width, screen_height, &texture_loader);
 
     let mut game_state = GameState::new();
+
+    let mut audio_system = AudioSystem::new();
+
+    let mut system = System::new();
+
+    system.add_observer(&mut game_state.system.message_queue);
+    game_state.system.add_observer(&mut audio_system.system.message_queue);
     
     // test_task_b(&mut game_state);
 
@@ -85,21 +99,24 @@ fn main() -> Result<(), String> {
                 Event::MouseButtonDown { x, y, .. } => {
                     let col: usize =  (x * 5 / board_view.screen_area.w).try_into().unwrap();
                     let row: usize =  (y * 5 / board_view.screen_area.h).try_into().unwrap();
-
-                    game_state.handle_click(row, col);
+                    system.publish(Message::DropPiece(row, col));
                 },
                 Event::KeyDown { keycode, .. } => {
                     if keycode.unwrap() == sdl2::keyboard::Keycode::U {
                         game_state.undo_action();
+                        //system.publish(Message::UndoMove);
                     }
                     else if keycode.unwrap() == sdl2::keyboard::Keycode::R {
                         game_state.redo_action();
+                        //system.publish(Message::DoMove);
                     }
                 }
                 _ => {}
             }
         }
         
+        game_state.update();
+        audio_system.update();
         board_view.render(&mut canvas, &game_state.board);
         canvas.present(); // update display
     }
