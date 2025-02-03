@@ -80,6 +80,12 @@ impl Program {
             return Err(error.to_string_lossy().into_owned());
         }
 
+        for shader in shaders {
+            unsafe {
+                gl::DetachShader(id, shader.id());
+            }
+        }
+
         Ok(Program { id })
     }
 
@@ -132,7 +138,7 @@ impl Vbo {
                 gl::ARRAY_BUFFER,
                 (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
                 vertices.as_ptr() as *const gl::types::GLvoid,
-                gl::STATIC_DRAW
+                gl::DYNAMIC_DRAW
             );
         }
     }
