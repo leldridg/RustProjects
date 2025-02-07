@@ -92,6 +92,10 @@ impl Program {
     pub fn set(&self) {
         unsafe { gl::UseProgram(self.id); }
     }
+
+    pub fn id(&self) -> GLuint {
+        self.id
+    }
 }
 
 impl Drop for Program {
@@ -259,5 +263,20 @@ impl Drop for Vao {
     fn drop(&mut self) {
         self.unbind();
         self.delete();
+    }
+}
+
+pub struct Uniform {
+    pub id: GLint,
+}
+
+impl Uniform {
+    pub fn new(program: u32, name: &str) -> Result<Self, String> {
+        let cname = CString::new(name).expect("CString::new failed.");
+        let location: GLint = unsafe { gl::GetUniformLocation(program, cname.as_ptr()) };
+        if location == -1 {
+            return Err(format!("Couldn't get uniform location for {}", name));
+        }
+        Ok(Uniform { id: location })
     }
 }

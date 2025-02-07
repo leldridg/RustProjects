@@ -1,16 +1,18 @@
-mod winsdl;
 use std::{f32::consts::PI, time::Instant};
+use sdl2::event::{Event, WindowEvent};
 
+mod winsdl;
 use winsdl::Winsdl;
+
 mod objects;
 use objects::*;
 
-
-use sdl2::event::Event;
+mod transform;
+use transform::*;
 
 fn main() {
-    let mut winsdl = Winsdl::new(1000, 1000).unwrap();
-    unsafe { gl::Viewport(0, 0, 1000, 1000); }
+    let mut winsdl = Winsdl::new(800, 600).unwrap();
+    unsafe { gl::Viewport(0, 0, 800, 600); }
     
     let program = create_program().unwrap();
     program.set();
@@ -34,16 +36,45 @@ fn main() {
     let ibo = Ibo::gen();
     ibo.set(&indices);
 
+    let mut model_matrix = Mat3::new();
+
+    let u_resolution = Uniform::new(program.id(), "u_resolution").unwrap();
+    let u_model_matrix = Uniform::new(program.id(), "u_model_matrix").unwrap();
+
+    unsafe { 
+        gl::Uniform2f(u_resolution.id, 800., 600.);
+
+        gl::UniformMatrix3fv(u_model_matrix.id, 1, gl::TRUE, model_matrix.ptr());
+    }
+
     let start = Instant::now();
     let mut seconds_elapsed: u32 = 0;
+
+    // my code
+    let speed = 0.0001;
+    let mut position_x = 0.0;
+    let direction = -1.0;
 
     'running: loop {
         for event in winsdl.event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'running,
+                Event::Window { win_event, .. } => {
+                    if let WindowEvent::Resized(width, height) = win_event {
+                        unsafe {
+                            gl::Viewport(0, 0, width, height);
+                            gl::Uniform2f(u_resolution.id, width as f32, height as f32);
+                        }
+                    }
+                }
                 _ => { },
             }
         }
+        
+        position_x += speed * direction;
+
+        //println!("movement: {}", speed * seconds_elapsed as f32);
+        model_matrix.translate(speed as f32, 0.0); 
 
         unsafe {
             gl::ClearColor(54./255., 159./255., 219./255., 1.0);
@@ -56,6 +87,8 @@ fn main() {
                 vbo.set(&vertices);
                 ibo.set(&indices);
             }
+
+            gl::UniformMatrix3fv(u_model_matrix.id, 1, gl::TRUE, model_matrix.ptr());
 
             gl::DrawElements(
                 gl::TRIANGLES,
