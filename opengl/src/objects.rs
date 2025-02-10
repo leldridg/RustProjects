@@ -1,6 +1,8 @@
 use std::{ffi::{CStr, CString}, ptr::{null, null_mut}};
 
-use gl::types::{GLuint, GLint, GLchar, GLenum};
+use gl::types::{GLchar, GLenum, GLint, GLuint};
+
+use super::Vertex;
 
 // an opengl shader
 pub struct Shader {
@@ -131,16 +133,16 @@ impl Vbo {
         Vbo { id }
     }
 
-    pub fn set(&self, data: &Vec<f32>) {
+    pub fn set(&self, data: &Vec<Vertex>) {
         self.bind();
         self.data(data);
     }
 
-    fn data(&self, vertices: &Vec<f32>) {
+    fn data(&self, vertices: &Vec<Vertex>) {
         unsafe {
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (vertices.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
+                (vertices.len() * std::mem::size_of::<Vertex>()) as gl::types::GLsizeiptr,
                 vertices.as_ptr() as *const gl::types::GLvoid,
                 gl::DYNAMIC_DRAW
             );
@@ -232,16 +234,28 @@ impl Vao {
         self.setup();
     }
 
+    /// this function should be manually modified whenever the layout of the vertex buffer changes
     fn setup(&self) {
+        //let stride = (2 * std::mem::size_of::<f32>() + std::nem::size_of::<u32>()) as GLint;
+        let stride = std::mem::size_of::<Vertex>() as GLint;
         unsafe {
             gl::EnableVertexAttribArray(0);
             gl::VertexAttribPointer(
                 0, 
+                1, 
+                gl::UNSIGNED_INT, 
+                gl::FALSE, // why is this not in original code?
+                stride,
+                null()
+            );
+            gl::EnableVertexAttribArray(1);
+            gl::VertexAttribPointer(
+                1, 
                 2, 
                 gl::FLOAT, 
                 gl::FALSE,
-                (2 *std::mem::size_of::<f32>()) as GLint,
-                null()
+                stride,
+                std::mem::size_of::<u32>() as *mut gl::types::GLvoid,
             );
         }
     }
