@@ -240,18 +240,19 @@ impl Vao {
         let stride = std::mem::size_of::<Vertex>() as GLint;
         unsafe {
             gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(
+            // Entity ID
+            gl::VertexAttribIPointer(
                 0, 
                 1, 
                 gl::UNSIGNED_INT, 
-                gl::FALSE, // why is this not in original code?
                 stride,
                 null()
             );
             gl::EnableVertexAttribArray(1);
+            // Position
             gl::VertexAttribPointer(
                 1, 
-                2, 
+                3, 
                 gl::FLOAT, 
                 gl::FALSE,
                 stride,

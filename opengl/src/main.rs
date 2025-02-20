@@ -33,20 +33,36 @@ fn main() {
 
     // let indices: Vec<u32> = vec! [ 0, 1, 2 ];
 
-    let (mut vertices, mut indices) = triangle_fan_3D(3, 6);
+    //let (mut vertices, mut indices) = triangle_fan_3D(3, 6);
+
+    let mut all_vertices: Vec<Vertex> = Vec::new();
+    let mut all_indices: Vec<u32> = Vec::new();
+
+    let (vertices, indices) = cube(0);
+    all_vertices.extend(vertices);
+    all_indices.extend(indices);
+
+    let (vertices, indices) = cube(1);
+    all_vertices.extend(vertices);
+    all_indices.extend(indices);
+
+    //let (more_vertices, more_indices) = cube(1);
+
+    //vertices.extend(more_vertices);
+    //indices.extend(more_indices);
 
     let vbo = Vbo::gen();
-    vbo.set(&vertices);
+    vbo.set(&all_vertices);
 
     let vao = Vao::gen();
     vao.set();
 
     let ibo = Ibo::gen();
-    ibo.set(&indices);
+    ibo.set(&all_indices);
 
     // let mut model_matrix = Mat4::new();
     // let mut view_matrix = Mat4::new();
-    let mut model_matrix: [Mat4 ; 6] = [Mat4::new(); 6];
+    let mut model_matrix: [Mat4 ; 2] = [Mat4::new(); 2];
     let mut view_matrix: Mat4;
     let mut projection_matrix: Mat4 = Mat4::new();
     projection_matrix.project_orthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
@@ -78,6 +94,8 @@ fn main() {
     let x_velocity = 0.0001;
     let y_velocity = 0;
 
+    model_matrix[0].translate(1.5, 0., 0.);
+
     'running: loop {
         for event in winsdl.event_pump.poll_iter() {
             match event {
@@ -102,6 +120,9 @@ fn main() {
             gl::ClearColor(54./255., 159./255., 219./255., 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
+            let time_mod = start.elapsed().as_secs_f32() % 6.0;
+
+            /* 
             if start.elapsed().as_secs_f32().floor() as u32 > seconds_elapsed {
                 seconds_elapsed += 1;
 
@@ -110,8 +131,6 @@ fn main() {
                 ibo.set(&indices);
             }
 
-            let time_mod = start.elapsed().as_secs_f32() % 6.0;
-
             for (i, m) in model_matrix.iter_mut().enumerate() {
                 *m = Mat4::new();
                 //m.translate(0.001, 0., 0.);
@@ -119,6 +138,7 @@ fn main() {
                 //m.rotate_z(time_mod.powi(2) / 2.);
                 m.rotate_x(PI / 6. * i as f32);
             }
+            */
 
             //model_matrix = Mat4::new();
             view_matrix = Mat4::new();
@@ -128,12 +148,12 @@ fn main() {
 
             // translating with mat3
             //gl::UniformMatrix3fv(u_model_matrix.id, 1, gl::TRUE, model_matrix.ptr());
-            gl::UniformMatrix4fv(u_model_matrix.id, 6, gl::TRUE, model_matrix[0].ptr());
+            gl::UniformMatrix4fv(u_model_matrix.id, 2, gl::TRUE, model_matrix[0].ptr());
             gl::UniformMatrix4fv(u_view_matrix.id, 1, gl::TRUE, view_matrix.ptr());
 
             gl::DrawElements(
                 gl::TRIANGLES,
-                indices.len() as i32,
+                all_indices.len() as i32,
                 gl::UNSIGNED_INT,
                 0 as *const _
             );
@@ -143,10 +163,62 @@ fn main() {
     }
 }
 
+fn cube(entity_id: u32) -> (Vec<Vertex>, Vec<u32>) {
+
+    let mut vertices: Vec<Vertex> = vec! [
+        // front face
+        Vertex::from_pos(-0.5, -0.5, -0.5),
+        Vertex::from_pos(-0.5, 0.5, -0.5),
+        Vertex::from_pos(0.5, 0.5, -0.5),
+        Vertex::from_pos(0.5, -0.5, -0.5),
+
+        // back face
+        Vertex::from_pos(0.5, -0.5, 0.5),
+        Vertex::from_pos(0.5, 0.5, 0.5),
+        Vertex::from_pos(-0.5, 0.5, 0.5),
+        Vertex::from_pos(-0.5, -0.5, 0.5),
+
+    ];
+
+    for vertex in &mut vertices {
+        vertex.entity_id = entity_id;
+    }
+
+    let mut indices: Vec<u32> = vec! [
+        // front face
+        0, 1, 2,
+        2, 3, 0,
+
+        // back face
+        4, 5, 6,
+        6, 7, 4,
+
+        // top face
+        1, 6, 5,
+        5, 2, 1,
+
+        // bottom face
+        7, 0, 3,
+        3, 4, 7,
+
+        // right face
+        3, 2, 5,
+        5, 4, 3,
+
+        // left face
+        7, 6, 1,
+        1, 0, 7,
+    ];
+
+    indices = indices.iter().map(|&i| i + 8 * entity_id).collect::<Vec<u32>>();
+
+    (vertices, indices)
+}
+
 fn triangle_fan(n: u32) -> (Vec<Vertex>, Vec<u32>) {
     let mut vertices: Vec<Vertex> = vec![
-        Vertex::from_pos(0.0, 0.0),
-        Vertex::from_pos(0.5, 0.0),
+        Vertex::from_pos(0.0, 0.0, 0.0),
+        Vertex::from_pos(0.5, 0.0, 0.0),
     ];
 
     let mut indices: Vec<u32> = vec! [ ];
@@ -157,7 +229,8 @@ fn triangle_fan(n: u32) -> (Vec<Vertex>, Vec<u32>) {
 
         vertices.push(Vertex::from_pos(
             angle.cos() * 0.5,
-            angle.sin() * 0.5
+            angle.sin() * 0.5,
+            0.0
         ));
 
         indices.push(0);
