@@ -68,6 +68,15 @@ impl Mat4 {
         self.0.as_ptr()
     }
 
+    pub fn vec_mult(&self, vec: [f32 ; 4]) -> [f32 ; 4] {
+        [
+            self.0[0] * vec[0] + self.0[1] * vec[1] + self.0[2] * vec[2] + self.0[3] * vec[3],
+            self.0[4] * vec[0] + self.0[5] * vec[1] + self.0[6] * vec[2] + self.0[7] * vec[3],
+            self.0[8] * vec[0] + self.0[9] * vec[1] + self.0[10] * vec[2] + self.0[11] * vec[3],
+            self.0[12] * vec[0] + self.0[13] * vec[1] + self.0[14] * vec[2] + self.0[15] * vec[3]
+        ]
+    }
+
     pub fn mult(&mut self, mat: Mat4) {
         *self = Mat4([
             mat.0[0]  * self.0[0] + mat.0[1]  * self.0[4] + mat.0[2]  * self.0[8] + mat.0[3]  * self.0[12] , mat.0[0]  * self.0[1] + mat.0[1]  * self.0[5] + mat.0[2]  * self.0[9] + mat.0[3]  * self.0[13] , mat.0[0]  * self.0[2] + mat.0[1]  * self.0[6] + mat.0[2]  * self.0[10] + mat.0[3]  * self.0[14] , mat.0[0]  * self.0[3] + mat.0[1]  * self.0[7] + mat.0[2]  * self.0[11] + mat.0[3]  * self.0[15] ,
@@ -159,8 +168,57 @@ impl Mat4 {
         *self = Mat4([
             2.0 * n / (r - l) , 0.0               , (r + l) / (r - l) , 0.0,
             0.0               , 2.0 * n / (t - b) , (t + b) / (t - b) , 0.0,
-            0.0               , 0.0               , -(f + n) / (f - n), -2.0 * f * n / (f - n),
+            0.0               , 0.0               , -(f + n) / (f - n), -(2.0 * f * n) / (f - n),
             0.0               , 0.0               , -1.0              , 0.0,
         ]);
+    }
+
+    // inverse of a view matrix contructed using lookat
+    pub fn inverse_view(&self) -> Mat4 {
+        let m = &self.0;
+        let mut inv = Mat4::new();
+
+        // transpose rotation
+        inv.0[0] = m[0];
+        inv.0[1] = m[4];
+        inv.0[2] = m[8];
+        inv.0[4] = m[1];
+        inv.0[5] = m[5];
+        inv.0[6] = m[9];
+        inv.0[8] = m[2];
+        inv.0[9] = m[6];
+        inv.0[10] = m[10];
+
+        // negate the translation and apply the transposed rotation
+        inv.0[12] = -(m[12] * m[0] + m[13] * m[1] + m[14] * m[2]);
+        inv.0[13] = -(m[12] * m[4] + m[13] * m[5] + m[14] * m[6]);
+        inv.0[14] = -(m[12] * m[8] + m[13] * m[9] + m[14] * m[10]);
+
+        inv
+    }
+
+    // inverse of orthographic projection matrix
+    pub fn inverse_orthographic(&self) -> Mat4 {
+        let m = &self.0;
+        Mat4([
+            1.0 / m[0] , 0.0        , 0.0         , -m[12] / m[0]  ,
+            0.0        , 1.0 / m[5] , 0.0         , -m[13] / m[5]  ,
+            0.0        , 0.0        , 1.0 / m[10] , -m[14] / m[10] ,
+            0.0        , 0.0        , 0.0         , 1.0            ,
+        ])
+    }
+
+    // inverse of a perspective projection matrix
+    pub fn inverse_perspective(&self) -> Mat4 {
+        let m = &self.0;
+        let mut inv = Mat4::new();
+
+        inv.0[0] = 1.0 / m[0];
+        inv.0[5] = 1.0 / m[5];
+        inv.0[11] = 1.0 / m[14];
+        inv.0[14] = 1.0 / m[11];
+        inv.0[15] = -m[10] / (m[14] * m[11]);
+
+        inv
     }
 }
