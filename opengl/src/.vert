@@ -1,12 +1,9 @@
 #version 330 core
 
-// layout (location = 0) in vec2 Position;
-layout (location = 0) in uint Entity_id;
-layout (location = 1) in vec3 Position;
+layout (location = 0) in vec3 Position;
 
 uniform vec2 u_resolution;
-// uniform mat3 u_model_matrix;
-uniform mat4 u_model_matrix[2];
+uniform mat4 u_model_matrix;
 uniform mat4 u_view_matrix;
 uniform mat4 u_projection_matrix;
 
@@ -16,9 +13,7 @@ out VS_OUTPUT {
 
 // executed in parallel for each vertex
 void main() {
-    // vec2 uv = Position;
-    // vec3 uv = u_model_matrix * vec3(Position, 1.0);
-    vec4 uv = u_model_matrix[Entity_id] * vec4(Position, 1.0); // 0.0 is z, 1.0 is w
+    vec4 uv = u_model_matrix * vec4(Position, 1.0); // 0.0 is z, 1.0 is w
     OUT.Color = vec3(uv.x, uv.y, uv.z);
     //OUT.Color = vec3(1, 0, 0);
     uv = u_projection_matrix * u_view_matrix * uv;
