@@ -12,10 +12,10 @@ use graphics::*;
 
 fn main() {
 // window
-    let mut width: usize = 800;
+    let mut width: usize = 600;
     let mut height: usize = 600;
-    let mut winsdl = Winsdl::new(800, 600).unwrap();
-    unsafe { gl::Viewport(0, 0, 800, 600); }
+    let mut winsdl = Winsdl::new(width, height).unwrap();
+    unsafe { gl::Viewport(0, 0, width as i32, height as i32); }
     
     let mut max_uniforms: gl::types::GLint = 0;
     unsafe { gl::GetIntegerv(gl::MAX_VERTEX_UNIFORM_VECTORS, &mut max_uniforms); }
@@ -80,12 +80,12 @@ fn main() {
 
 // values for projection
 
-    let l = -1.;
-    let r = 1.;
-    let b = -1.;
-    let t = 1.;
-    let n = 0.2;
-    let f = 2.;
+    let l = -10.;
+    let r = 10.;
+    let b = -10.;
+    let t = 10.;
+    let n = 0.1;
+    let f = 100.;
 
     let aspect_ratio = (r - l) / (t - b);
     println!("Aspect ratio is {} for r {}, l {}, t {}, and b {}", aspect_ratio, r, l, t, b);
@@ -99,7 +99,7 @@ fn main() {
     let u_projection_matrix = Uniform::new(program.id(), "u_projection_matrix").unwrap();
 
     unsafe { 
-        gl::Uniform2f(u_resolution.id, 800., 600.);
+        gl::Uniform2f(u_resolution.id, width as f32, height as f32);
         gl::UniformMatrix4fv(u_projection_matrix.id, 1, gl::FALSE, projection_matrix.to_cols_array().as_ptr());
         gl::Enable(gl::DEPTH_TEST);
         gl::DepthFunc(gl::LESS);
@@ -138,38 +138,45 @@ fn main() {
                             println!("Screen x: {}, Screen y: {}", x, y);
                             // normalize x and y coordinates
                             let norm = Vec4::new(
-                                (2. * x as f32) / 800. - 1.,
-                                1. - (2. * y as f32) / 600.,
+                                (2. * x as f32) / width as f32 - 1.,
+                                1. - (2. * y as f32) / height as f32,
                                 -1.,
                                 1.
                             );
+
                             // inverse projection matrix
                             let inverse_projection = projection_matrix.inverse();
+
                             // multiply inverse projection matrix and (x_n, y_n, z, w)
                             let mut ray_eye = inverse_projection * norm;
                             ray_eye[2] = -1.;
                             ray_eye[3] = 0.;
+
                             // inverse view matrix
                             let inverse_view = view_matrix.inverse();
+
                             // multiply inverse view matrix and ray_eye
                             let ray_world = inverse_view * ray_eye;
-                            // normalize ray_world
-                            let length = (ray_world[0] * ray_world[0] + ray_world[1] * ray_world[1] + ray_world[2] * ray_world[2]).sqrt();
-                            let result: [f32; 3];
-                            if length != 0. {
-                                result = [
-                                    ray_world[0] / length,
-                                    ray_world[1] / length,
-                                    ray_world[2] / length
-                                ];
+
+                            if (perspective) {
+                                // normalize ray_world
+                                let ray_direction = Vec3::new(ray_world[0], ray_world[1], ray_world[2]).normalize();
+
+                                // use current z value for cube
+                                let cube_z = cube_center[2];
+
+                                // calculate the intersection point at the cube's z value
+                                let t = (cube_z - eye_z) / ray_direction[2];
+                                let world_x = eye_x + t * ray_direction[0];
+                                let world_y = eye_y + t * ray_direction[1];
+
+                                println!("World x: {}, World y: {}, World z: {}", world_x, world_y, cube_z);
+                                cube_center = Vec3::new(world_x, world_y, cube_z);
                             } else {
-                                result = [-1., -1., -1.];
+                                println!("World x: {}, World y: {}, World z: {}", ray_world[0], ray_world[1], cube_center.z);
+                                cube_center = Vec3::new(ray_world[0], ray_world[1], cube_center.z);
                             }
-                            println!("World x: {}, World y: {}, World z: {}", result[0], result[1], result[2]);
-                            cube_center = Vec3::new(result[0], result[1], 0.);
-                            //cube_center = Vec3::new(ray_world[0], ray_world[1], 0.);
                             cube.set_model_matrix(Mat4::from_translation(cube_center));
-                            //println!("x: {}, y: {}", ray_world[0], ray_world[1]);
                         },
                         _ => { }
                     }
